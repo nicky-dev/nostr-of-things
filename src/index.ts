@@ -1,19 +1,25 @@
 /**
- * NoT (Nostr of Things) - Main Entry Point
+ * NoT (Nostr of Things) — Public API
  *
- * This is the entry point for the NoT protocol implementation.
- * Use this to bootstrap the decentralized IoT network.
+ * Decentralized IoT communication protocol built on Nostr.
+ * Devices connect directly to Nostr relays — no gateway required.
  */
 
-import { generateKeypair } from './utils/nsec';
-import { NotClient, ClientConfig, NotEvent } from './clients/client';
+// Core
+export * from './core/event';
+export * from './core/encryption';
+export * from './core/relay';
 
-// Generate default keypair for demonstration
-const { privateKey, publicKey } = generateKeypair();
+// Clients — NotEvent re-exported from core, avoid duplicate
+export { NotClient, ClientConfig } from './clients/client';
+export * from './clients/device';
+export * from './clients/user';
 
-console.log(`NoT Network Initialized`);
-console.log(`Public Key: ${publicKey}`);
-console.log(`Private Key: ${privateKey}`);
+// Protocols
+export * from './protocols/sensor';
+export * from './protocols/control';
+export * from './protocols/telemetry';
 
-// Export main interfaces and classes
-export { NotClient, generateKeypair, ClientConfig, NotEvent };
+// Utils
+export * from './utils/nsec';
+export * from './utils/helpers';

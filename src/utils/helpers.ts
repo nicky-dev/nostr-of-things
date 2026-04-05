@@ -3,35 +3,35 @@
  */
 
 /**
- * Convert timestamp to ISO string
+ * Convert Unix seconds timestamp to ISO string
  */
 export function timestampToIso(timestamp: number): string {
   return new Date(timestamp * 1000).toISOString();
 }
 
 /**
- * Parse ISO string to timestamp
+ * Parse ISO string to Unix seconds timestamp
  */
 export function isoToTimestamp(iso: string): number {
   return Math.floor(new Date(iso).getTime() / 1000);
 }
 
 /**
- * Serialize event to JSON
+ * Serialize a value to JSON string
  */
-export function serializeEvent(event: any): string {
+export function serializeEvent(event: Record<string, unknown>): string {
   return JSON.stringify(event);
 }
 
 /**
- * Deserialize JSON to event
+ * Deserialize a JSON string to an object
  */
-export function deserializeEvent(json: string): any {
-  return JSON.parse(json);
+export function deserializeEvent(json: string): Record<string, unknown> {
+  return JSON.parse(json) as Record<string, unknown>;
 }
 
 /**
- * Format sensor reading with timestamp
+ * Format a sensor reading with a Unix seconds timestamp
  */
 export function formatSensorReading(
   sensor: string,
@@ -42,6 +42,6 @@ export function formatSensorReading(
     sensor,
     value,
     unit,
-    timestamp: Date.now(),
+    timestamp: Math.floor(Date.now() / 1000),
   });
 }

@@ -14,7 +14,18 @@
     "declarationMap": true,
     "sourceMap": true,
     "moduleResolution": "node",
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": ".",
+    "paths": {
+      "@not/core": ["src/core"],
+      "@not/core/*": ["src/core/*"],
+      "@not/clients": ["src/clients"],
+      "@not/clients/*": ["src/clients/*"],
+      "@not/protocols": ["src/protocols"],
+      "@not/protocols/*": ["src/protocols/*"],
+      "@not/utils": ["src/utils"],
+      "@not/utils/*": ["src/utils/*"]
+    }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "tests"]
