@@ -5,7 +5,7 @@
  * sending commands, and receiving telemetry.
  */
 
-import { NotClient, ClientConfig, NotEvent } from './client';
+import { NotClient, ClientConfig, NotEvent, MaybeSignedEvent } from './client';
 import { RelayClient, RelayFilter, RelayEventCallback } from '../core/relay';
 import { signEvent } from '../utils/nsec';
 import { createEventTemplate } from '../core/event';
@@ -45,21 +45,24 @@ export class UserClient extends NotClient {
 
   /**
    * Sign and publish an event to all connected relays.
+   * Unsigned events are auto-signed when privateKey is configured.
    *
    * @returns The event ID
    */
-  async send(event: NotEvent): Promise<string> {
+  async send(event: MaybeSignedEvent): Promise<string> {
     if (!this.connected) {
       throw new Error('UserClient: not connected to any relay');
     }
 
-    let signed = event;
-    if (!event.sig && this.config.privateKey) {
-      const { sig: _sig, id: _id, ...unsigned } = event;
-      void _sig;
-      void _id;
-      signed = signEvent(unsigned, this.config.privateKey);
-    }
+    const signed: NotEvent =
+      'sig' in event
+        ? event
+        : (() => {
+            if (!this.config.privateKey) {
+              throw new Error('UserClient: privateKey is required to send unsigned events');
+            }
+            return signEvent(event, this.config.privateKey);
+          })();
 
     await Promise.allSettled(this.relayClients.map((r) => r.publish(signed)));
     return signed.id;

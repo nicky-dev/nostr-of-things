@@ -12,6 +12,8 @@ module.exports = {
   transform: {
     '^.+\\.tsx?$': ['ts-jest', { tsconfig: 'tests/tsconfig.json' }],
   },
+  // Allow Jest to transform @noble/hashes if needed
+  transformIgnorePatterns: ['/node_modules/'],
   moduleNameMapper: {
     '^@not/core$': '<rootDir>/src/core',
     '^@not/core/(.*)$': '<rootDir>/src/core/$1',

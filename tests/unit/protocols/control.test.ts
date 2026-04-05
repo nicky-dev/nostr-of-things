@@ -2,6 +2,9 @@ import {
   createDeviceCommandEvent,
   createDeviceStatusEvent,
   createDeviceEvent,
+  decryptEventContent,
+  parseDeviceCommandPayload,
+  parseDeviceStatusPayload,
   parseDeviceEventPayload,
   validateDeviceCommandPayload,
   validateDeviceStatusPayload,
@@ -11,10 +14,12 @@ import {
   DeviceEventPayload,
 } from '@not/protocols/control';
 import { EVENT_KINDS } from '@not/core/event';
+import nacl from 'tweetnacl';
 
 const senderPubkey = 'a'.repeat(64);
 const privateKey = 'b'.repeat(128);
 const recipientBoxPublicKey = new Uint8Array(32).fill(6);
+const recipientPrivateKey = 'c'.repeat(128);
 
 describe('createDeviceCommandEvent', () => {
   const payload: DeviceCommandPayload = {
@@ -39,6 +44,14 @@ describe('createDeviceCommandEvent', () => {
     const event = createDeviceCommandEvent(payload, senderPubkey, privateKey, recipientBoxPublicKey);
     const tTag = event.tags.find((t) => t[0] === 't');
     expect(tTag?.[1]).toBe('device.cmd');
+  });
+
+  it('should include a box tag with sender box public key', () => {
+    const event = createDeviceCommandEvent(payload, senderPubkey, privateKey, recipientBoxPublicKey);
+    const boxTag = event.tags.find((t) => t[0] === 'box');
+    expect(boxTag).toBeDefined();
+    expect(typeof boxTag?.[1]).toBe('string');
+    expect(boxTag?.[1]).toHaveLength(64); // 32 bytes as hex
   });
 
   it('should have encrypted content (not plain JSON)', () => {
@@ -70,6 +83,71 @@ describe('createDeviceStatusEvent', () => {
     const event = createDeviceStatusEvent(payload, senderPubkey, privateKey, recipientBoxPublicKey);
     const tTag = event.tags.find((t) => t[0] === 't');
     expect(tTag?.[1]).toBe('device.status');
+  });
+
+  it('should include a box tag with sender box public key', () => {
+    const event = createDeviceStatusEvent(payload, senderPubkey, privateKey, recipientBoxPublicKey);
+    const boxTag = event.tags.find((t) => t[0] === 'box');
+    expect(boxTag).toBeDefined();
+    expect(typeof boxTag?.[1]).toBe('string');
+  });
+});
+
+describe('decryptEventContent', () => {
+  const payload: DeviceCommandPayload = {
+    device_id: 'dev-1',
+    command: 'reboot',
+  };
+
+  it('should call decryptContent with the box tag key and recipient secret key', () => {
+    const event = createDeviceCommandEvent(payload, senderPubkey, privateKey, recipientBoxPublicKey);
+    // nacl.box.open is mocked to return a fixed Uint8Array — just verify no throw and returns string
+    const result = decryptEventContent(event, recipientPrivateKey);
+    expect(typeof result).toBe('string');
+    expect(nacl.box.open).toHaveBeenCalled();
+  });
+
+  it('should throw when the event has no box tag', () => {
+    const event = createDeviceCommandEvent(payload, senderPubkey, privateKey, recipientBoxPublicKey);
+    const eventWithoutBoxTag = {
+      ...event,
+      tags: event.tags.filter((t) => t[0] !== 'box'),
+    };
+    expect(() => decryptEventContent(eventWithoutBoxTag, recipientPrivateKey)).toThrow(
+      'missing the "box" tag'
+    );
+  });
+
+  it('should throw when nacl.box.open returns null (wrong key)', () => {
+    (nacl.box.open as unknown as jest.Mock).mockReturnValueOnce(null);
+    const event = createDeviceCommandEvent(payload, senderPubkey, privateKey, recipientBoxPublicKey);
+    expect(() => decryptEventContent(event, recipientPrivateKey)).toThrow('Decryption failed');
+  });
+
+  it('should parse decrypted command payload', () => {
+    const event = createDeviceCommandEvent(payload, senderPubkey, privateKey, recipientBoxPublicKey);
+    // Mock box.open to return the encoded payload
+    const encoded = new TextEncoder().encode(JSON.stringify(payload));
+    (nacl.box.open as unknown as jest.Mock).mockReturnValueOnce(encoded);
+    const decrypted = decryptEventContent(event, recipientPrivateKey);
+    const parsed = parseDeviceCommandPayload(decrypted);
+    expect(parsed.command).toBe('reboot');
+    expect(parsed.device_id).toBe('dev-1');
+  });
+
+  it('should parse decrypted status payload', () => {
+    const statusPayload: DeviceStatusPayload = { device_id: 'dev-1', status: 'online' };
+    const event = createDeviceStatusEvent(
+      statusPayload,
+      senderPubkey,
+      privateKey,
+      recipientBoxPublicKey
+    );
+    const encoded = new TextEncoder().encode(JSON.stringify(statusPayload));
+    (nacl.box.open as unknown as jest.Mock).mockReturnValueOnce(encoded);
+    const decrypted = decryptEventContent(event, recipientPrivateKey);
+    const parsed = parseDeviceStatusPayload(decrypted);
+    expect(parsed.status).toBe('online');
   });
 });
 

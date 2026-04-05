@@ -104,11 +104,26 @@ export function parseSensorAlertPayload(event: NotEvent): SensorAlertPayload {
  */
 export function validateSensorDataPayload(payload: SensorDataPayload): boolean {
   if (typeof payload.sensor_id !== 'string' || payload.sensor_id.length === 0) return false;
-  if (typeof payload.readings !== 'object' || payload.readings === null) return false;
+  // readings must be a plain object (not an array)
+  if (
+    typeof payload.readings !== 'object' ||
+    payload.readings === null ||
+    Array.isArray(payload.readings)
+  ) {
+    return false;
+  }
   for (const value of Object.values(payload.readings)) {
     if (typeof value !== 'number') return false;
   }
   if (payload.metadata !== undefined) {
+    // metadata must be a plain object
+    if (
+      typeof payload.metadata !== 'object' ||
+      payload.metadata === null ||
+      Array.isArray(payload.metadata)
+    ) {
+      return false;
+    }
     const { unit, accuracy, sample_rate } = payload.metadata;
     if (typeof unit !== 'string') return false;
     if (typeof accuracy !== 'number') return false;

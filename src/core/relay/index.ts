@@ -28,6 +28,9 @@ interface Subscription {
   onEose?: RelayEoseCallback;
 }
 
+/** Default publish timeout in milliseconds */
+const DEFAULT_PUBLISH_TIMEOUT_MS = 10_000;
+
 /**
  * RelayClient — manages a single WebSocket connection to a Nostr relay.
  *
@@ -44,10 +47,15 @@ export class RelayClient {
   private ws: WebSocket | null = null;
   private status: RelayStatus = 'disconnected';
   private subscriptions = new Map<string, Subscription>();
-  private pendingPublish = new Map<string, (ok: boolean, message?: string) => void>();
+  private pendingPublish = new Map<
+    string,
+    { resolve: (ok: boolean) => void; reject: (err: Error) => void; timer: ReturnType<typeof setTimeout> }
+  >();
+  private publishTimeoutMs: number;
 
-  constructor(url: string) {
+  constructor(url: string, publishTimeoutMs = DEFAULT_PUBLISH_TIMEOUT_MS) {
     this.url = url;
+    this.publishTimeoutMs = publishTimeoutMs;
   }
 
   getStatus(): RelayStatus {
@@ -84,6 +92,7 @@ export class RelayClient {
 
       this.ws.onclose = () => {
         this.status = 'disconnected';
+        this.rejectAllPendingPublishes(new Error('Relay connection closed'));
       };
 
       this.ws.onmessage = (msg: MessageEvent) => {
@@ -93,7 +102,7 @@ export class RelayClient {
   }
 
   /**
-   * Close the WebSocket connection.
+   * Close the WebSocket connection and reject any pending publishes.
    */
   disconnect(): void {
     if (this.ws) {
@@ -102,11 +111,12 @@ export class RelayClient {
       this.ws = null;
     }
     this.status = 'disconnected';
+    this.rejectAllPendingPublishes(new Error('Relay disconnected'));
   }
 
   /**
    * Publish a signed event to the relay.
-   * Resolves with true on OK, rejects on failure.
+   * Resolves with true on OK, rejects on failure or timeout.
    */
   publish(event: NotEvent): Promise<boolean> {
     return new Promise((resolve, reject) => {
@@ -115,12 +125,17 @@ export class RelayClient {
         return;
       }
 
-      this.pendingPublish.set(event.id, (ok, message) => {
-        if (ok) {
-          resolve(true);
-        } else {
-          reject(new Error(message ?? 'Relay rejected event'));
+      const timer = setTimeout(() => {
+        if (this.pendingPublish.has(event.id)) {
+          this.pendingPublish.delete(event.id);
+          reject(new Error(`Publish timed out for event ${event.id}`));
         }
+      }, this.publishTimeoutMs);
+
+      this.pendingPublish.set(event.id, {
+        resolve,
+        reject,
+        timer,
       });
 
       this.ws.send(JSON.stringify(['EVENT', event]));
@@ -198,13 +213,26 @@ export class RelayClient {
       if (typeof eventId !== 'string' || !/^[0-9a-f]{64}$/.test(eventId)) return;
       const ok = msg[2] as boolean;
       const message = msg[3] as string | undefined;
-      const cb = this.pendingPublish.get(eventId);
-      if (cb) {
+      const pending = this.pendingPublish.get(eventId);
+      if (pending) {
+        clearTimeout(pending.timer);
         this.pendingPublish.delete(eventId);
-        cb(ok, message);
+        if (ok) {
+          pending.resolve(true);
+        } else {
+          pending.reject(new Error(message ?? 'Relay rejected event'));
+        }
       }
     } else if (type === 'NOTICE' && msg.length >= 2) {
       // Relay notice — intentionally not logged in production
+    }
+  }
+
+  private rejectAllPendingPublishes(err: Error): void {
+    for (const [id, pending] of this.pendingPublish) {
+      clearTimeout(pending.timer);
+      pending.reject(err);
+      this.pendingPublish.delete(id);
     }
   }
 }

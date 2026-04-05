@@ -19,6 +19,7 @@
   "author": "NoT Team",
   "license": "MIT",
   "dependencies": {
+    "@noble/hashes": "^1.8.0",
     "tweetnacl": "^1.0.3",
     "uuid": "^9.0.0"
   },

@@ -47,6 +47,7 @@ export function createDeviceCommandEvent(
   recipientBoxPublicKey: Uint8Array
 ): NotEvent {
   const senderSecretKeyBytes = Buffer.from(senderPrivateKey, 'hex');
+  const senderBoxPublicKey = deriveBoxPublicKey(senderSecretKeyBytes);
   const encryptedContent = encryptContent(
     JSON.stringify(payload),
     senderSecretKeyBytes,
@@ -56,6 +57,7 @@ export function createDeviceCommandEvent(
   const tags: string[][] = [
     ['t', 'device.cmd'],
     ['p', payload.device_id],
+    ['box', Buffer.from(senderBoxPublicKey).toString('hex')],
   ];
 
   const unsigned: UnsignedEvent = createEventTemplate(
@@ -83,6 +85,7 @@ export function createDeviceStatusEvent(
   recipientBoxPublicKey: Uint8Array
 ): NotEvent {
   const senderSecretKeyBytes = Buffer.from(senderPrivateKey, 'hex');
+  const senderBoxPublicKey = deriveBoxPublicKey(senderSecretKeyBytes);
   const encryptedContent = encryptContent(
     JSON.stringify(payload),
     senderSecretKeyBytes,
@@ -92,6 +95,7 @@ export function createDeviceStatusEvent(
   const tags: string[][] = [
     ['t', 'device.status'],
     ['p', payload.device_id],
+    ['box', Buffer.from(senderBoxPublicKey).toString('hex')],
   ];
 
   const unsigned: UnsignedEvent = createEventTemplate(
@@ -133,6 +137,9 @@ export function createDeviceEvent(
 /**
  * Decrypt a device.cmd or device.status event content.
  *
+ * The event must contain a `box` tag carrying the sender's X25519 public key
+ * (added automatically by createDeviceCommandEvent / createDeviceStatusEvent).
+ *
  * @param event - The encrypted event
  * @param recipientPrivateKey - Recipient's Ed25519 secret key (hex)
  * @returns Decrypted payload string
@@ -141,8 +148,12 @@ export function decryptEventContent(
   event: NotEvent,
   recipientPrivateKey: string
 ): string {
+  const boxTag = event.tags.find((t) => t[0] === 'box');
+  if (!boxTag || !boxTag[1]) {
+    throw new Error('decryptEventContent: event is missing the "box" tag (sender box public key)');
+  }
+  const senderBoxPublicKey = Buffer.from(boxTag[1], 'hex');
   const recipientSecretKeyBytes = Buffer.from(recipientPrivateKey, 'hex');
-  const senderBoxPublicKey = deriveBoxPublicKey(Buffer.from(event.pubkey, 'hex'));
   return decryptContent(event.content, recipientSecretKeyBytes, senderBoxPublicKey);
 }
 

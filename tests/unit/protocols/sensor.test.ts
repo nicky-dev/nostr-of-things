@@ -156,6 +156,44 @@ describe('validateSensorDataPayload', () => {
       })
     ).toBe(false);
   });
+
+  it('should reject an array as readings', () => {
+    expect(
+      validateSensorDataPayload({
+        sensor_id: 'temp',
+        readings: [20, 25] as unknown as Record<string, number>,
+      })
+    ).toBe(false);
+  });
+
+  it('should reject null readings', () => {
+    expect(
+      validateSensorDataPayload({
+        sensor_id: 'temp',
+        readings: null as unknown as Record<string, number>,
+      })
+    ).toBe(false);
+  });
+
+  it('should reject null metadata', () => {
+    expect(
+      validateSensorDataPayload({
+        sensor_id: 'temp',
+        readings: { temperature: 20 },
+        metadata: null as unknown as SensorDataPayload['metadata'],
+      })
+    ).toBe(false);
+  });
+
+  it('should reject array metadata', () => {
+    expect(
+      validateSensorDataPayload({
+        sensor_id: 'temp',
+        readings: { temperature: 20 },
+        metadata: ['celsius'] as unknown as SensorDataPayload['metadata'],
+      })
+    ).toBe(false);
+  });
 });
 
 describe('validateSensorAlertPayload', () => {

@@ -170,6 +170,17 @@ describe('validateTelemetryMetricPayload', () => {
       })
     ).toBe(false);
   });
+
+  it('should reject tags array containing non-string elements', () => {
+    expect(
+      validateTelemetryMetricPayload({
+        device_id: 'dev',
+        metric: 'cpu',
+        value: 50,
+        tags: [42, 'production'] as unknown as string[],
+      })
+    ).toBe(false);
+  });
 });
 
 describe('validateTelemetryErrorPayload', () => {

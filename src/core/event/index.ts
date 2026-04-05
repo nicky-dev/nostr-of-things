@@ -2,7 +2,8 @@
  * Core Event Module — NIP-01 compliant event creation, hashing, and validation
  */
 
-import { createHash } from 'crypto';
+import { sha256 } from '@noble/hashes/sha256';
+import { bytesToHex } from '@noble/hashes/utils';
 
 /** Custom IoT event kinds for NoT (NIP-XX-IoT) */
 export const EVENT_KINDS = {
@@ -46,10 +47,11 @@ export function serializeForHashing(event: UnsignedEvent): string {
 
 /**
  * Compute the SHA-256 event ID from an unsigned event (NIP-01).
+ * Uses @noble/hashes for Node + browser compatibility.
  */
 export function computeEventId(event: UnsignedEvent): string {
   const serialized = serializeForHashing(event);
-  return createHash('sha256').update(serialized).digest('hex');
+  return bytesToHex(sha256(new TextEncoder().encode(serialized)));
 }
 
 /**

@@ -104,7 +104,12 @@ export function validateTelemetryMetricPayload(payload: TelemetryMetricPayload):
   if (typeof payload.device_id !== 'string' || payload.device_id.length === 0) return false;
   if (typeof payload.metric !== 'string' || payload.metric.length === 0) return false;
   if (typeof payload.value !== 'number') return false;
-  if (payload.tags !== undefined && !Array.isArray(payload.tags)) return false;
+  if (
+    payload.tags !== undefined &&
+    (!Array.isArray(payload.tags) || !payload.tags.every((tag) => typeof tag === 'string'))
+  ) {
+    return false;
+  }
   return true;
 }
 
