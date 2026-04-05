@@ -10,11 +10,14 @@ module.exports = {
   ],
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   transform: {
-    '^.+\\.tsx?$': 'ts-jest',
+    '^.+\\.tsx?$': ['ts-jest', { tsconfig: 'tests/tsconfig.json' }],
   },
   moduleNameMapper: {
-    '^(@not/core)': '<rootDir>/src/core',
-    '^(@not/clients)': '<rootDir>/src/clients',
-    '^(@not/protocols)': '<rootDir>/src/protocols',
+    '^@not/core$': '<rootDir>/src/core',
+    '^@not/core/(.*)$': '<rootDir>/src/core/$1',
+    '^@not/clients$': '<rootDir>/src/clients',
+    '^@not/clients/(.*)$': '<rootDir>/src/clients/$1',
+    '^@not/protocols$': '<rootDir>/src/protocols',
+    '^@not/protocols/(.*)$': '<rootDir>/src/protocols/$1',
   },
 };

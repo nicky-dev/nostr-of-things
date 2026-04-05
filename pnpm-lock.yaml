@@ -30,6 +30,9 @@ importers:
       '@types/jest':
         specifier: ^30.0.0
         version: 30.0.0
+      '@types/node':
+        specifier: ^25.5.2
+        version: 25.5.2
       '@types/uuid':
         specifier: ^9.0.7
         version: 9.0.8

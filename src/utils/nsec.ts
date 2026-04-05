@@ -1,50 +1,65 @@
 /**
  * NSEC (Nostr Event Signer)
- * Utilities for event signing and pubkey generation
+ * Utilities for event signing and keypair generation
  */
 
-import { nacl } from 'tweetnacl';
+import nacl from 'tweetnacl';
+import { UnsignedEvent, NotEvent, computeEventId } from '../core/event';
 
-/**
- * Generate a new keypair
- * @returns {Object} { privateKey, publicKey }
- */
-/**
- * Generate a new keypair
- * @returns {Object} { privateKey, publicKey }
- */
-export function generateKeypair(): { privateKey: string; publicKey: string } {
-  const keypair = nacl.sign.keyPair();
-  const privateKey = Buffer.from(keypair.secretKey).toString('hex');
-  const publicKey = Buffer.from(keypair.publicKey).toString('hex');
-  return { privateKey, publicKey: publicKey.toLowerCase() };
+export interface Keypair {
+  /** Ed25519 secret key — 64 bytes as lowercase hex */
+  privateKey: string;
+  /** Ed25519 public key — 32 bytes as lowercase hex */
+  publicKey: string;
+  /** X25519 (box) public key — 32 bytes as lowercase hex, derived from the same seed */
+  boxPublicKey: string;
 }
 
 /**
- * Sign an event
- * @param event - The event to sign
- * @param privateKey - Private key hex string
- * @returns {string} Signature
+ * Generate a new Ed25519 keypair for Nostr identity.
+ * Also derives the corresponding X25519 public key for encrypted messages.
  */
-export function signEvent(event: any, privateKey: string): string {
+export function generateKeypair(): Keypair {
+  const signKeypair = nacl.sign.keyPair();
+  const seed = signKeypair.secretKey.slice(0, 32);
+  const boxKeypair = nacl.box.keyPair.fromSecretKey(seed);
+
+  return {
+    privateKey: Buffer.from(signKeypair.secretKey).toString('hex'),
+    publicKey: Buffer.from(signKeypair.publicKey).toString('hex').toLowerCase(),
+    boxPublicKey: Buffer.from(boxKeypair.publicKey).toString('hex').toLowerCase(),
+  };
+}
+
+/**
+ * Sign an unsigned event and return the complete signed NotEvent.
+ *
+ * @param event - Unsigned event (without id or sig)
+ * @param privateKey - Ed25519 secret key as hex string (128 chars / 64 bytes)
+ * @returns Fully signed NotEvent
+ */
+export function signEvent(event: UnsignedEvent, privateKey: string): NotEvent {
+  const id = computeEventId(event);
   const secretKey = Buffer.from(privateKey, 'hex');
-  const message = JSON.stringify(event);
-  const signature = nacl.sign.detached(Buffer.from(message), secretKey);
-  return Buffer.from(signature).toString('hex');
+  const signature = nacl.sign.detached(Buffer.from(id, 'hex'), secretKey);
+
+  return {
+    ...event,
+    id,
+    sig: Buffer.from(signature).toString('hex'),
+  };
 }
 
 /**
- * Verify an event signature
- * @param event - The event to verify
- * @param publicKey - Public key hex string
- * @returns {boolean} True if valid
+ * Verify the signature of a signed NotEvent.
+ *
+ * @param event - The signed event to verify
+ * @param publicKey - Ed25519 public key as hex string (64 chars / 32 bytes)
+ * @returns true if the signature is valid
  */
-export function verifyEvent(event: any, publicKey: string): boolean {
-  const secretKey = Buffer.from(publicKey, 'hex');
-  const message = JSON.stringify(event);
-  return nacl.sign.detached.verify(
-    Buffer.from(message),
-    Buffer.from(event.sig, 'hex'),
-    secretKey
-  );
+export function verifySignature(event: NotEvent, publicKey: string): boolean {
+  const pubkeyBytes = Buffer.from(publicKey, 'hex');
+  const idBytes = Buffer.from(event.id, 'hex');
+  const sigBytes = Buffer.from(event.sig, 'hex');
+  return nacl.sign.detached.verify(idBytes, sigBytes, pubkeyBytes);
 }

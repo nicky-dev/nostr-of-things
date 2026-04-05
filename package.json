@@ -7,8 +7,9 @@
     "build": "tsc",
     "dev": "ts-node-dev --respawn src/index.ts",
     "test": "jest",
-    "lint": "eslint src/",
-    "format": "prettier --write src/"
+    "lint": "eslint src/ tests/",
+    "format": "prettier --write src/ tests/",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "nostr",
@@ -23,6 +24,7 @@
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
+    "@types/node": "^25.5.2",
     "@types/uuid": "^9.0.7",
     "@typescript-eslint/eslint-plugin": "^8.58.0",
     "@typescript-eslint/parser": "^8.58.0",

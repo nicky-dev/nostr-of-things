@@ -4,10 +4,19 @@
  * Devices connect directly to Nostr relays — no gateway required
  */
 
+import type { NotEvent } from '../core/event';
+export type { NotEvent } from '../core/event';
+
 export interface ClientConfig {
+  /** Ed25519 public key — 32 bytes as lowercase hex */
   pubkey: string;
+  /** Ed25519 secret key — 64 bytes as hex (required for signing/encryption) */
   privateKey?: string;
+  /** X25519 public key — 32 bytes as hex (required for receiving encrypted messages) */
+  boxPublicKey?: string;
+  /** Relay URLs to connect to */
   relays?: string[];
+  /** Connection timeout in milliseconds */
   timeout?: number;
 }
 
@@ -21,14 +30,5 @@ export abstract class NotClient {
   abstract connect(): Promise<void>;
   abstract disconnect(): Promise<void>;
   abstract send(event: NotEvent): Promise<string>;
-  abstract subscribe(npub?: string, since?: string): Promise<void>;
-}
-
-export interface NotEvent {
-  id: string;
-  pubkey: string;
-  created_at: number;
-  tags: string[][];
-  content: string;
-  sig: string;
+  abstract subscribe(npub?: string, since?: number): Promise<void>;
 }

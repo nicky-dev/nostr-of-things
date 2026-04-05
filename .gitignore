@@ -29,7 +29,6 @@ npm-debug.log*
 coverage/
 
 # Jest
-*.test.ts
 __tests__/
 
 # TypeScript cache
