@@ -1,5 +1,6 @@
 import { UserClient } from '@not/clients/user';
 import { NotEvent, UnsignedEvent } from '@not/core/event';
+import type { RelayFilter } from '@not/core/relay';
 
 // --- Mocks --------------------------------------------------------------------
 
@@ -282,6 +283,3 @@ describe('UserClient', () => {
     });
   });
 });
-
-// Import RelayFilter type for type annotations
-import type { RelayFilter } from '@not/core/relay';

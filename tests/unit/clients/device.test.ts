@@ -1,5 +1,6 @@
 import { DeviceClient } from '@not/clients/device';
 import { NotEvent, UnsignedEvent } from '@not/core/event';
+import type { RelayFilter } from '@not/core/relay';
 
 // --- Mocks --------------------------------------------------------------------
 
@@ -266,6 +267,3 @@ describe('DeviceClient', () => {
     });
   });
 });
-
-// Import RelayFilter type for type annotations
-import type { RelayFilter } from '@not/core/relay';
