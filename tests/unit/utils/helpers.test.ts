@@ -4,7 +4,7 @@ import {
   serializeEvent,
   deserializeEvent,
   formatSensorReading,
-} from '@not/core/../utils/helpers';
+} from '@not/utils/helpers';
 
 describe('timestampToIso', () => {
   it('should convert Unix seconds to ISO 8601 string', () => {

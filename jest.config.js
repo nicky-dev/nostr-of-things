@@ -19,5 +19,7 @@ module.exports = {
     '^@not/clients/(.*)$': '<rootDir>/src/clients/$1',
     '^@not/protocols$': '<rootDir>/src/protocols',
     '^@not/protocols/(.*)$': '<rootDir>/src/protocols/$1',
+    '^@not/utils$': '<rootDir>/src/utils',
+    '^@not/utils/(.*)$': '<rootDir>/src/utils/$1',
   },
 };

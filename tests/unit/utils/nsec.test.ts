@@ -1,4 +1,4 @@
-import { generateKeypair, signEvent, verifySignature } from '@not/core/../utils/nsec';
+import { generateKeypair, signEvent, verifySignature } from '@not/utils/nsec';
 import nacl from 'tweetnacl';
 import { createEventTemplate } from '@not/core/event';
 

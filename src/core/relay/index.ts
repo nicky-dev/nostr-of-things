@@ -175,22 +175,27 @@ export class RelayClient {
 
     if (!Array.isArray(msg) || msg.length < 2) return;
     const [type] = msg as [string, ...unknown[]];
+    if (typeof type !== 'string') return;
 
     if (type === 'EVENT' && msg.length >= 3) {
-      const subscriptionId = msg[1] as string;
+      const subscriptionId = msg[1];
+      if (typeof subscriptionId !== 'string') return;
       const event = msg[2] as NotEvent;
       const sub = this.subscriptions.get(subscriptionId);
       if (sub) {
         sub.onEvent(event);
       }
     } else if (type === 'EOSE' && msg.length >= 2) {
-      const subscriptionId = msg[1] as string;
+      const subscriptionId = msg[1];
+      if (typeof subscriptionId !== 'string') return;
       const sub = this.subscriptions.get(subscriptionId);
       if (sub?.onEose) {
         sub.onEose(subscriptionId);
       }
     } else if (type === 'OK' && msg.length >= 3) {
-      const eventId = msg[1] as string;
+      const eventId = msg[1];
+      // Validate eventId is a 64-char hex string (NIP-01 event ID format)
+      if (typeof eventId !== 'string' || !/^[0-9a-f]{64}$/.test(eventId)) return;
       const ok = msg[2] as boolean;
       const message = msg[3] as string | undefined;
       const cb = this.pendingPublish.get(eventId);
