@@ -229,10 +229,11 @@ export class RelayClient {
   }
 
   private rejectAllPendingPublishes(err: Error): void {
-    for (const [id, pending] of this.pendingPublish) {
+    const entries = Array.from(this.pendingPublish.values());
+    this.pendingPublish.clear();
+    for (const pending of entries) {
       clearTimeout(pending.timer);
       pending.reject(err);
-      this.pendingPublish.delete(id);
     }
   }
 }

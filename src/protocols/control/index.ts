@@ -33,6 +33,31 @@ export interface DeviceEventPayload {
 // ─── Serialization ────────────────────────────────────────────────────────────
 
 /**
+ * Build the encrypted content and tags shared by device.cmd and device.status events.
+ */
+function buildEncryptedEventParts(
+  payload: DeviceCommandPayload | DeviceStatusPayload,
+  eventType: string,
+  recipientDeviceId: string,
+  senderPrivateKey: string,
+  recipientBoxPublicKey: Uint8Array
+): { encryptedContent: string; tags: string[][] } {
+  const senderSecretKeyBytes = Buffer.from(senderPrivateKey, 'hex');
+  const senderBoxPublicKey = deriveBoxPublicKey(senderSecretKeyBytes);
+  const encryptedContent = encryptContent(
+    JSON.stringify(payload),
+    senderSecretKeyBytes,
+    recipientBoxPublicKey
+  );
+  const tags: string[][] = [
+    ['t', eventType],
+    ['p', recipientDeviceId],
+    ['box', Buffer.from(senderBoxPublicKey).toString('hex')],
+  ];
+  return { encryptedContent, tags };
+}
+
+/**
  * Create a signed and encrypted device.cmd event (kind 4078).
  *
  * @param payload - Command payload
@@ -46,19 +71,13 @@ export function createDeviceCommandEvent(
   senderPrivateKey: string,
   recipientBoxPublicKey: Uint8Array
 ): NotEvent {
-  const senderSecretKeyBytes = Buffer.from(senderPrivateKey, 'hex');
-  const senderBoxPublicKey = deriveBoxPublicKey(senderSecretKeyBytes);
-  const encryptedContent = encryptContent(
-    JSON.stringify(payload),
-    senderSecretKeyBytes,
+  const { encryptedContent, tags } = buildEncryptedEventParts(
+    payload,
+    'device.cmd',
+    payload.device_id,
+    senderPrivateKey,
     recipientBoxPublicKey
   );
-
-  const tags: string[][] = [
-    ['t', 'device.cmd'],
-    ['p', payload.device_id],
-    ['box', Buffer.from(senderBoxPublicKey).toString('hex')],
-  ];
 
   const unsigned: UnsignedEvent = createEventTemplate(
     EVENT_KINDS.DEVICE_CMD,
@@ -84,19 +103,13 @@ export function createDeviceStatusEvent(
   senderPrivateKey: string,
   recipientBoxPublicKey: Uint8Array
 ): NotEvent {
-  const senderSecretKeyBytes = Buffer.from(senderPrivateKey, 'hex');
-  const senderBoxPublicKey = deriveBoxPublicKey(senderSecretKeyBytes);
-  const encryptedContent = encryptContent(
-    JSON.stringify(payload),
-    senderSecretKeyBytes,
+  const { encryptedContent, tags } = buildEncryptedEventParts(
+    payload,
+    'device.status',
+    payload.device_id,
+    senderPrivateKey,
     recipientBoxPublicKey
   );
-
-  const tags: string[][] = [
-    ['t', 'device.status'],
-    ['p', payload.device_id],
-    ['box', Buffer.from(senderBoxPublicKey).toString('hex')],
-  ];
 
   const unsigned: UnsignedEvent = createEventTemplate(
     EVENT_KINDS.DEVICE_STATUS,
